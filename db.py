@@ -3,15 +3,25 @@ import psycopg2
 import pandas as pd
 
 def get_conn():
-    # En Streamlit Cloud guardaremos esto de forma segura en los "Secrets"
-    # Aquí puedes poner tus credenciales directas para pruebas locales
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST", "tu_host_de_supabase"),
-        database=os.getenv("DB_NAME", "postgres"),
-        user=os.getenv("DB_USER", "postgres"),
-        password=os.getenv("DB_PASSWORD", "tu_password"),
-        port=os.getenv("DB_PORT", "5432")
-    )
+    # Intenta leer desde st.secrets (Streamlit Cloud) o usa variables de entorno
+    try:
+        import streamlit as st
+        return psycopg2.connect(
+            host=st.secrets.get("DB_HOST", os.getenv("DB_HOST")),
+            database=st.secrets.get("DB_NAME", os.getenv("DB_NAME", "postgres")),
+            user=st.secrets.get("DB_USER", os.getenv("DB_USER", "postgres")),
+            password=st.secrets.get("DB_PASSWORD", os.getenv("DB_PASSWORD")),
+            port=st.secrets.get("DB_PORT", os.getenv("DB_PORT", "5432"))
+        )
+    except Exception:
+        # Fallback para pruebas locales directas si no usas st.secrets
+        return psycopg2.connect(
+            host=os.getenv("DB_HOST", "tu_host_de_supabase"),
+            database=os.getenv("DB_NAME", "postgres"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD", "tu_password"),
+            port=os.getenv("DB_PORT", "5432")
+        )
 
 def verificar_login(email, password):
     conn = get_conn()
