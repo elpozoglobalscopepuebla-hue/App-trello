@@ -7,9 +7,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Gestor de Proyectos", layout="wide")
 
-# 1. Inicialización y Background Tasks
-db.init_db()
-
+# 1. Inicialización de tareas en segundo plano (Ya no se llama a db.init_db())
 @st.cache_resource
 def init_background_tasks():
     return email_service.iniciar_scheduler()
@@ -52,8 +50,7 @@ else:
     tab_kanban, tab_dashboard, tab_equipo = st.tabs(["📋 Tablero Kanban", "📊 Dashboard", "👥 Equipo"])
 
     with tab_kanban:
-        # Auto-recarga para ver los cambios de otros usuarios en "tiempo real"
-        # Se actualiza cada 10,000 milisegundos (10 segundos)
+        # Auto-recarga cada 10 segundos para ver cambios de otros usuarios en tiempo real
         st_autorefresh(interval=10000, key="kanban_refresh")
         
         st.header("Tablero de Proyecto")
@@ -67,15 +64,12 @@ else:
                 fecha = col2.date_input("Fecha límite")
                 prioridad = col2.selectbox("Prioridad", ["Alta", "Media", "Baja"])
                 
-                usuarios_df = pd.read_sql_query("SELECT * FROM Usuarios", db.get_conn())
+                usuarios_df = pd.read_sql("SELECT * FROM Usuarios", db.get_conn())
                 usuarios_dict = dict(zip(usuarios_df['nombre'], usuarios_df['id']))
                 responsable = col2.selectbox("Responsable", options=list(usuarios_dict.keys()))
                 
                 if st.form_submit_button("Crear Tarea") and titulo:
                     db.add_tarea(TABLERO_ID, 1, titulo, desc, fecha.strftime('%Y-%m-%d'), prioridad, usuarios_dict[responsable])
-                    # Lógica de correo (descomenta en producción)
-                    # email_dest = usuarios_df[usuarios_df['nombre'] == responsable]['email'].values[0]
-                    # email_service.enviar_correo(email_dest, f"Nueva tarea: {titulo}", "Revisa el tablero.")
                     st.success("Tarea creada.")
                     st.rerun()
 
@@ -133,4 +127,4 @@ else:
 
     with tab_equipo:
         st.header("Directorio")
-        st.dataframe(pd.read_sql_query("SELECT nombre, email FROM Usuarios", db.get_conn()), use_container_width=True)
+        st.dataframe(pd.read_sql("SELECT nombre, email FROM Usuarios", db.get_conn()), use_container_width=True)
